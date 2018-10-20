@@ -35,6 +35,14 @@ function riu_rv_log_plugin_deactivated() {
     error_log( "RV Travel Log plugin has been deactivated!" );
 }
 
+//add_action( 'all', 'riu_rv_log_debug' );
+/**
+ * Will print every action! Really not all that useful.
+ */
+function riu_rv_log_debug() {
+    error_log( current_action() );
+}
+
 /*
  * Create the markup to display the custom fields.
  */
@@ -178,6 +186,79 @@ function get_display_custom_meta_markup( $post_id ) {
         if ( !empty( $stored_park_cost ) ) $return .= '<strong>Cost</strong>: ' . $formatted_cost . '<br/>';
         $return .= '</div>';
     }
+
+    return $return;
+}
+
+
+/**
+ * 
+ * 
+ * SHORTCODES
+ * 
+ */
+
+add_action('init', 'riu_rv_log_shortcodes_init');
+ /**
+  * Add shortcode
+  */
+function riu_rv_log_shortcodes_init() {
+    function riu_rv_log_shortcode($atts = [], $content = null) {
+
+        // Get a list of posts with rv metadata
+        $args = array(
+            'post_type' => 'post',
+            'meta_key' => 'riu-rv-log-start-date',
+            'orderby' => 'meta_value',
+            'order' => 'ASC',
+            'meta_query' => array(
+                array(
+                    'key' => 'riu-rv-log-park-name',
+                    'compare' => 'EXISTS',
+                ),
+            ),
+        );
+        $query = new WP_Query($args);
+        $return = '<div class="park-info">';
+        $return .= '<table style="width:100%">';
+        $return .= '<tr>';
+        $return .= '<th>Campground Name</th>';
+        $return .= '<th>Start Date</th>';
+        $return .= '<th>End Date</th>';
+        $return .= '<th>Cost</th>';
+        $return .= '<th>Site Number</th>';
+        $return .= '</tr>';
+        while ( $query->have_posts() ): $query->the_post(); global $post;
+            // Print to the screen
+            $return .= get_display_rv_table_markup($post->ID);
+        endwhile; wp_reset_postdata();
+        $return .= '</table>';
+        echo $return;
+        // always return
+        return $content;
+    }
+
+    add_shortcode('riu_rv_log', 'riu_rv_log_shortcode');
+}
+
+function get_display_rv_table_markup($post_id) {
+    // fetch post metadata
+    $stored_start_date = get_post_meta( $post_id, 'riu-rv-log-start-date' );
+    $stored_end_date = get_post_meta( $post_id, 'riu-rv-log-end-date' );
+    $stored_park_name = get_post_meta( $post_id, 'riu-rv-log-park-name' );
+    $stored_park_cost = get_post_meta( $post_id, 'riu-rv-log-park-cost' );
+    $stored_site_number = get_post_meta( $post_id, 'riu-rv-log-site-number' );
+
+    $return = '<tr>';
+    if ( !empty( $stored_park_name ) ) {
+        // return formatted view
+        $return .= '<td style="width:40%">' . $stored_park_name[0] . '</td>';
+        $return .= '<td>' . $stored_start_date[0] . '</td>';
+        $return .= '<td>' . $stored_end_date[0] . '</td>';
+        $return .= '<td>' . $stored_park_cost[0] . '</td>';
+        $return .= '<td>' . $stored_site_number[0] . '</td>';
+    }
+    $return .= '</tr>';
 
     return $return;
 }
